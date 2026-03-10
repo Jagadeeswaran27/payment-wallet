@@ -31,6 +31,20 @@ class FirebaseStorageService {
     return ref.fullPath;
   }
 
+  Future<void> uploadKycImage(File image) async {
+    final uid = _auth.currentUser!.uid;
+
+    final String fileName = 'kyc_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+    final Reference ref = _firebaseStorage.ref().child('kyc/$uid/$fileName');
+
+    final UploadTask uploadTask = ref.putFile(
+      File(image.path),
+      SettableMetadata(contentType: 'image/jpeg'),
+    );
+    await uploadTask;
+  }
+
   Future<String> getImageUrlFromPath(String path) async {
     final Reference ref = _firebaseStorage.ref(path);
     return await ref.getDownloadURL();

@@ -8,6 +8,7 @@ class UserModel {
   final String? state;
   final String? address;
   final String? profilePicPath;
+  final bool? kycStatus;
 
   UserModel({
     required this.uid,
@@ -19,6 +20,7 @@ class UserModel {
     this.state,
     this.address,
     this.profilePicPath,
+    this.kycStatus,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -32,6 +34,7 @@ class UserModel {
       state: map['state'],
       address: map['address'],
       profilePicPath: map['profilePicPath'],
+      kycStatus: map['kycStatus'],
     );
   }
 
@@ -45,6 +48,7 @@ class UserModel {
     String? state,
     String? address,
     String? profilePicPath,
+    bool? kycStatus,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -56,6 +60,7 @@ class UserModel {
       state: state ?? this.state,
       address: address ?? this.address,
       profilePicPath: profilePicPath ?? this.profilePicPath,
+      kycStatus: kycStatus ?? this.kycStatus,
     );
   }
 
@@ -64,12 +69,13 @@ class UserModel {
       'uid': uid,
       'phone': phone,
       'isOnboardCompleted': isOnboardCompleted,
-      'name': name ?? '',
-      'email': email ?? '',
-      'state': state ?? '',
-      'address': address ?? '',
-      'profilePicPath': profilePicPath ?? '',
+      'name': name,
+      'email': email,
+      'state': state,
+      'address': address,
+      'profilePicPath': profilePicPath,
       'walletBalance': walletBalance,
+      'kycStatus': kycStatus,
     };
   }
 }
