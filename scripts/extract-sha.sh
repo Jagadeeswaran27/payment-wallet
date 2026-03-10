@@ -21,7 +21,6 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-cd "$PROJECT_ROOT"
 
 # Default debug keystore locations
 if [[ "$OSTYPE" == "darwin"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
@@ -72,9 +71,12 @@ extract_sha_from_keystore() {
 
     # Extract certificate info
     local cert_info
+    set +e
     cert_info=$(keytool -list -v -keystore "$keystore_path" -alias "$alias" -storepass "$password" 2>/dev/null)
+    local exit_code=$?
+    set -e
 
-    if [ $? -ne 0 ]; then
+    if [ $exit_code -ne 0 ]; then
         echo -e "${YELLOW}⚠ Could not read keystore with default credentials.${NC}"
         echo -e "${CYAN}For release keystores, enter credentials:${NC}"
         echo ""
@@ -84,9 +86,12 @@ extract_sha_from_keystore() {
         echo ""
         password=$input_password
 
+        set +e
         cert_info=$(keytool -list -v -keystore "$keystore_path" -alias "$alias" -storepass "$password" 2>/dev/null)
+        exit_code=$?
+        set -e
         
-        if [ $? -ne 0 ]; then
+        if [ $exit_code -ne 0 ]; then
             echo -e "${RED}✗ Failed to read keystore. Check alias and password.${NC}"
             return 1
         fi
@@ -130,9 +135,12 @@ extract_sha_from_keystore() {
 extract_sha_gradle() {
     echo -e "${MAGENTA}📋 Gradle Signing Report${NC}"
     echo "─────────────────────────────────────────────────────"
+
+    # Ensure we are in the project root for Gradle
+    cd "$PROJECT_ROOT"
     
     if [ ! -d "android" ]; then
-        echo -e "${RED}✗ Android directory not found. Run from project root.${NC}"
+        echo -e "${RED}✗ Android directory not found.${NC}"
         return 1
     fi
 
@@ -148,11 +156,13 @@ extract_sha_gradle() {
         }
     else
         echo -e "${RED}✗ gradlew not found in android directory${NC}"
-        cd ..
+        # No need to cd .. as we are in a subshell or localized function context if invoked appropriately, 
+        # but since we cd'd in this function, we can just return.
         return 1
     fi
     
-    cd ..
+    # Return to previous directory not strictly necessary if script exits, but good practice if called multiple times
+    cd "$PROJECT_ROOT" 
     return 0
 }
 
