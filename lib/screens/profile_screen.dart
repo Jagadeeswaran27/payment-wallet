@@ -82,6 +82,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         state: _selectedState,
         address: _addressController.text,
         walletBalance: currentUser.walletBalance,
+        kycStatus: currentUser.kycStatus,
       );
 
       ref

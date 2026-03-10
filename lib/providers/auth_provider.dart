@@ -56,4 +56,8 @@ class AuthUserStateNotifier extends StreamNotifier<UserModel?> {
       state.value?.copyWith(walletBalance: state.value!.walletBalance - amount),
     );
   }
+
+  void updateKycStatus(bool status) {
+    state = AsyncValue.data(state.value?.copyWith(kycStatus: status));
+  }
 }

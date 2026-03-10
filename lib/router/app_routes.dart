@@ -1,3 +1,4 @@
+import 'package:app/screens/kyc_screen.dart';
 import 'package:flutter/material.dart';
 
 import 'package:go_router/go_router.dart';
@@ -33,6 +34,7 @@ enum AppRoutes {
   sendMoney,
   transactions,
   routes,
+  kyc,
 }
 
 extension AppRoutesExtension on AppRoutes {
@@ -51,6 +53,7 @@ extension AppRoutesExtension on AppRoutes {
     AppRoutes.addMoney: '/add-money',
     AppRoutes.sendMoney: '/send-money',
     AppRoutes.transactions: '/transactions',
+    AppRoutes.kyc: '/kyc',
   };
 
   static const Map<AppRoutes, String> _names = {
@@ -68,6 +71,7 @@ extension AppRoutesExtension on AppRoutes {
     AppRoutes.addMoney: 'add-money',
     AppRoutes.sendMoney: 'send-money',
     AppRoutes.transactions: 'transactions',
+    AppRoutes.kyc: 'kyc',
   };
 
   static const Map<AppRoutes, Widget Function()> _builders = {
@@ -85,6 +89,7 @@ extension AppRoutesExtension on AppRoutes {
     AppRoutes.addMoney: AddMoneyScreen.new,
     AppRoutes.sendMoney: SendMoneyScreen.new,
     AppRoutes.transactions: TransactionsScreen.new,
+    AppRoutes.kyc: KycScreen.new,
   };
 
   String get path => _paths[this]!;

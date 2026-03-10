@@ -1,3 +1,4 @@
+import 'package:app/providers/kyc_provider.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -114,6 +115,56 @@ class AccountScreen extends ConsumerWidget {
             },
           ),
           _buildDivider(),
+          _buildOptionItem(
+            context,
+            icon: Icons.lock_outline_rounded,
+            title: 'Kyc Verifcation',
+            subtitle: user?.kycStatus == true
+                ? 'Identity verified'
+                : 'Verify your identity',
+            trailing: user?.kycStatus == true
+                ? const Icon(
+                    Icons.check_circle_rounded,
+                    color: Colors.green,
+                    size: 20,
+                  )
+                : null,
+            onTap: () async {
+              if (user?.kycStatus == true) {
+                CustomSnackBar.show(context, message: "Kyc already verified");
+                return;
+              }
+              final result = await ref
+                  .read(authServiceProvider)
+                  .getCurrentUser();
+              result.fold(
+                (failure) {
+                  CustomSnackBar.show(context, message: failure.message);
+                },
+                (user) async {
+                  final kycStatus = await ref
+                      .read(kycProvider)
+                      .getKycStatus(ref: ref, uid: user.uid);
+                  kycStatus.fold(
+                    (failure) {
+                      CustomSnackBar.show(context, message: failure.message);
+                    },
+                    (kycStatus) {
+                      if (kycStatus) {
+                        CustomSnackBar.show(
+                          context,
+                          message: "Kyc already verified",
+                        );
+                      } else {
+                        pushToScreen(context, AppRoutes.kyc.path);
+                      }
+                    },
+                  );
+                },
+              );
+            },
+          ),
+          _buildDivider(),
           const SizedBox(height: 32),
           OutlinedButton(
             onPressed: () async {
@@ -160,6 +211,7 @@ class AccountScreen extends ConsumerWidget {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    Widget? trailing,
   }) {
     return ListTile(
       onTap: onTap,
@@ -185,11 +237,13 @@ class AccountScreen extends ConsumerWidget {
         subtitle,
         style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
       ),
-      trailing: const Icon(
-        Icons.arrow_forward_ios_rounded,
-        size: 16,
-        color: Colors.grey,
-      ),
+      trailing:
+          trailing ??
+          const Icon(
+            Icons.arrow_forward_ios_rounded,
+            size: 16,
+            color: Colors.grey,
+          ),
     );
   }
 
