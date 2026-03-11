@@ -1,4 +1,5 @@
 import 'package:app/screens/kyc_screen.dart';
+import 'package:app/screens/payment_success_screen.dart';
 import 'package:flutter/material.dart';
 
 import 'package:go_router/go_router.dart';
@@ -35,6 +36,7 @@ enum AppRoutes {
   transactions,
   routes,
   kyc,
+  paymentSuccess,
 }
 
 extension AppRoutesExtension on AppRoutes {
@@ -54,6 +56,7 @@ extension AppRoutesExtension on AppRoutes {
     AppRoutes.sendMoney: '/send-money',
     AppRoutes.transactions: '/transactions',
     AppRoutes.kyc: '/kyc',
+    AppRoutes.paymentSuccess: '/payment-success',
   };
 
   static const Map<AppRoutes, String> _names = {
@@ -72,6 +75,7 @@ extension AppRoutesExtension on AppRoutes {
     AppRoutes.sendMoney: 'send-money',
     AppRoutes.transactions: 'transactions',
     AppRoutes.kyc: 'kyc',
+    AppRoutes.paymentSuccess: 'payment-success',
   };
 
   static const Map<AppRoutes, Widget Function()> _builders = {
@@ -96,6 +100,18 @@ extension AppRoutesExtension on AppRoutes {
   String get name => _names[this]!;
 
   GoRoute get route {
+    if (this == AppRoutes.paymentSuccess) {
+      return GoRoute(
+        name: name,
+        path: path,
+        builder: (context, state) {
+          final params = state.uri.queryParameters;
+          final amount = double.tryParse(params['amount'] ?? '');
+          final recipient = params['recipient'];
+          return PaymentSuccessScreen(amount: amount, recipient: recipient);
+        },
+      );
+    }
     return GoRoute(
       name: name,
       path: path,

@@ -9,7 +9,6 @@ import 'package:app/providers/auth_provider.dart';
 import 'package:app/providers/payment_method_providers.dart';
 import 'package:app/providers/payment_providers.dart';
 import 'package:app/utils/payment_util.dart';
-import 'package:app/widgets/custom_snackbar.dart';
 import 'package:app/utils/navigation.dart';
 import 'package:app/models/payment_card.dart';
 import 'package:app/resources/icons.dart';
@@ -86,8 +85,16 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
           );
         },
         data: (_) {
-          CustomSnackBar.show(context, message: 'Payment Successful!');
-          goToScreen(context, AppRoutes.home.path);
+          final amount = double.tryParse(_amountController.text) ?? 0;
+          final recipient = paymentState.value;
+          final uri = Uri(
+            path: AppRoutes.paymentSuccess.path,
+            queryParameters: {
+              if (amount > 0) 'amount': amount.toString(),
+              if (recipient != null && recipient.isNotEmpty) 'recipient': recipient,
+            },
+          );
+          goToScreen(context, uri.toString());
         },
       );
     });
