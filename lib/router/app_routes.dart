@@ -108,10 +108,7 @@ extension AppRoutesExtension on AppRoutes {
           final params = state.uri.queryParameters;
           final amount = double.tryParse(params['amount'] ?? '');
           final recipient = params['recipient'];
-          return PaymentSuccessScreen(
-            amount: amount,
-            recipient: recipient,
-          );
+          return PaymentSuccessScreen(amount: amount, recipient: recipient);
         },
       );
     }
