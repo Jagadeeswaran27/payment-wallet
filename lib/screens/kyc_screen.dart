@@ -1,14 +1,21 @@
 import 'dart:io';
 
-import 'package:app/core/theme/app_theme.dart';
-import 'package:app/providers/auth_provider.dart';
-import 'package:app/providers/kyc_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+
+import 'package:app/core/theme/app_theme.dart';
+import 'package:app/router/app_routes.dart';
+import 'package:app/providers/auth_provider.dart';
+import 'package:app/providers/kyc_provider.dart';
 import 'package:app/utils/kyc_validators.dart';
+import 'package:app/utils/navigation.dart';
+import 'package:app/widgets/custom_text_field.dart';
+import 'package:app/widgets/custom_dropdown.dart';
+import 'package:app/widgets/custom_snackbar.dart';
+import 'package:app/widgets/primary_button.dart';
 
 class KycScreen extends ConsumerStatefulWidget {
   const KycScreen({super.key});
@@ -53,7 +60,7 @@ class _KycScreenState extends ConsumerState<KycScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
+            colorScheme: const ColorScheme.light(
               primary: AppColors.primary,
               onPrimary: Colors.white,
               onSurface: AppColors.textPrimary,
@@ -70,6 +77,35 @@ class _KycScreenState extends ConsumerState<KycScreen> {
     }
   }
 
+  void _handleSubmit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_frontImage == null || _backImage == null) {
+      CustomSnackBar.show(
+        context,
+        message: 'Please upload both side images',
+        isError: true,
+      );
+      return;
+    }
+
+    final result = await ref.read(authServiceProvider).getCurrentUser();
+
+    result.fold(
+      (failure) {
+        CustomSnackBar.show(context, message: failure.message, isError: true);
+      },
+      (user) {
+        ref.read(kycControllerProvider.notifier).updateKycStatus(
+          ref: ref,
+          uid: user.uid,
+          image1: _frontImage!,
+          image2: _backImage!,
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _idController.dispose();
@@ -80,27 +116,19 @@ class _KycScreenState extends ConsumerState<KycScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final kycState = ref.watch(kycControllerProvider);
+
     ref.listen(kycControllerProvider, (previous, next) {
-      if (!next.isLoading && !next.hasError) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('KYC Submitted Successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.pop(context);
-        }
+      if (!next.isLoading && !next.hasError && previous?.isLoading == true) {
+        CustomSnackBar.show(context, message: 'KYC Submitted Successfully!');
+        goToScreen(context, AppRoutes.account.path);
       }
       if (next.hasError) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(next.error.toString()),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        CustomSnackBar.show(
+          context,
+          message: next.error.toString(),
+          isError: true,
+        );
       }
     });
 
@@ -119,7 +147,7 @@ class _KycScreenState extends ConsumerState<KycScreen> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => popScreen(context),
         ),
       ),
       body: SingleChildScrollView(
@@ -131,13 +159,35 @@ class _KycScreenState extends ConsumerState<KycScreen> {
             children: [
               _buildSectionTitle('Identity Details'),
               const SizedBox(height: 16),
-              _buildDropdownField(),
+              CustomDropdown(
+                value: _selectedIdType,
+                hintText: 'Select document type',
+                label: 'ID Type',
+                prefixIcon: Icons.assignment_ind_outlined,
+                items: _idTypes,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedIdType = value;
+                    _idController.clear();
+                  });
+                },
+                validator: (value) =>
+                    value == null ? 'Please select an ID type' : null,
+              ),
               const SizedBox(height: 16),
-              _buildTextField(
+              CustomTextField(
                 controller: _idController,
+                hintText: 'Enter your ${_selectedIdType ?? "ID"} number',
                 label: 'ID Number',
-                hint: 'Enter your ${_selectedIdType ?? "ID"} number',
-                icon: Icons.credit_card,
+                prefixIcon: Icons.credit_card,
+                keyboardType: _selectedIdType == 'Aadhaar Card'
+                    ? TextInputType.number
+                    : TextInputType.text,
+                inputFormatters: [
+                  LengthLimitingTextInputFormatter(
+                    _selectedIdType == 'Aadhaar Card' ? 12 : 10,
+                  ),
+                ],
                 validator: (value) {
                   if (_selectedIdType == 'Aadhaar Card') {
                     final error = KycValidators.validateAadhar(value);
@@ -151,26 +201,31 @@ class _KycScreenState extends ConsumerState<KycScreen> {
                   }
                   return null;
                 },
-                keyboardType: _selectedIdType == 'Aadhaar Card'
-                    ? TextInputType.number
-                    : TextInputType.text,
-                inputFormatters: [
-                  LengthLimitingTextInputFormatter(
-                    _selectedIdType == 'Aadhaar Card' ? 12 : 10,
-                  ),
-                ],
               ),
-
               const SizedBox(height: 16),
-              _buildTextField(
-                keyboardType: TextInputType.text,
+              CustomTextField(
                 controller: _nameController,
+                hintText: 'As mentioned in your ID',
                 label: 'Full Name',
-                hint: 'As mentioned in your ID',
-                icon: Icons.person_outline,
+                prefixIcon: Icons.person_outline,
+                keyboardType: TextInputType.text,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'This field is required';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
-              _buildDateField(),
+              CustomTextField(
+                controller: _dobController,
+                hintText: 'DD/MM/YYYY',
+                label: 'Date of Birth',
+                prefixIcon: Icons.calendar_today_outlined,
+                readOnly: true,
+                onTap: () => _selectDate(context),
+                validator: KycValidators.validateAge,
+              ),
               const SizedBox(height: 32),
               _buildSectionTitle('Document Upload'),
               const SizedBox(height: 8),
@@ -199,75 +254,10 @@ class _KycScreenState extends ConsumerState<KycScreen> {
                 ],
               ),
               const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: ref.watch(kycControllerProvider).isLoading
-                      ? null
-                      : () async {
-                          if (_formKey.currentState!.validate()) {
-                            if (_frontImage == null || _backImage == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Please upload both side images',
-                                  ),
-                                ),
-                              );
-                              return;
-                            }
-
-                            final result = await ref
-                                .read(authServiceProvider)
-                                .getCurrentUser();
-
-                            result.fold(
-                              (failure) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(failure.message)),
-                                );
-                              },
-                              (user) {
-                                ref
-                                    .read(kycControllerProvider.notifier)
-                                    .updateKycStatus(
-                                      ref: ref,
-                                      uid: user.uid,
-                                      image1: _frontImage!,
-                                      image2: _backImage!,
-                                    );
-                              },
-                            );
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 4,
-                    shadowColor: AppColors.primary.withOpacity(0.4),
-                    disabledBackgroundColor: AppColors.primary.withOpacity(0.6),
-                  ),
-                  child: ref.watch(kycControllerProvider).isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text(
-                          'Submit for Verification',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                ),
+              PrimaryButton(
+                text: 'Submit for Verification',
+                isLoading: kycState.isLoading,
+                onPressed: _handleSubmit,
               ),
               const SizedBox(height: 20),
             ],
@@ -285,118 +275,6 @@ class _KycScreenState extends ConsumerState<KycScreen> {
         fontWeight: FontWeight.bold,
         color: AppColors.textPrimary,
       ),
-    );
-  }
-
-  Widget _buildDropdownField() {
-    return DropdownButtonFormField<String>(
-      value: _selectedIdType,
-      decoration: InputDecoration(
-        labelText: 'ID Type',
-        hintText: 'Select document type',
-        prefixIcon: const Icon(
-          Icons.assignment_ind_outlined,
-          color: AppColors.textSecondary,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
-        ),
-        filled: true,
-        fillColor: Colors.grey[100],
-      ),
-      items: _idTypes.map((String type) {
-        return DropdownMenuItem<String>(value: type, child: Text(type));
-      }).toList(),
-      onChanged: (String? newValue) {
-        setState(() {
-          _selectedIdType = newValue;
-        });
-      },
-      validator: (value) => value == null ? 'Please select an ID type' : null,
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    required TextInputType keyboardType,
-    String? Function(String?)? validator,
-    List<TextInputFormatter>? inputFormatters,
-  }) {
-    return TextFormField(
-      controller: controller,
-      inputFormatters: inputFormatters,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-
-        prefixIcon: Icon(icon, color: AppColors.textSecondary),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
-        ),
-        filled: true,
-        fillColor: Colors.grey[100],
-      ),
-      keyboardType: keyboardType,
-      validator:
-          validator ??
-          (value) {
-            if (value == null || value.isEmpty) {
-              return 'This field is required';
-            }
-            return null;
-          },
-    );
-  }
-
-  Widget _buildDateField() {
-    return TextFormField(
-      controller: _dobController,
-      readOnly: true,
-      onTap: () => _selectDate(context),
-      decoration: InputDecoration(
-        labelText: 'Date of Birth',
-        hintText: 'DD/MM/YYYY',
-        prefixIcon: const Icon(
-          Icons.calendar_today_outlined,
-          color: AppColors.textSecondary,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
-        ),
-        filled: true,
-        fillColor: Colors.grey[100],
-      ),
-      validator: KycValidators.validateAge,
     );
   }
 
