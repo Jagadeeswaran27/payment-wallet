@@ -20,6 +20,21 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final TextEditingController _upiController = TextEditingController();
 
+  bool _ensureKycVerified() {
+    final user = ref.read(authStateChangesProvider).value;
+    if (user?.kycStatus == true) {
+      return true;
+    }
+
+    CustomSnackBar.show(
+      context,
+      message: 'Please complete KYC verification to use this feature',
+      isError: true,
+    );
+    pushToScreen(context, AppRoutes.kyc.path);
+    return false;
+  }
+
   @override
   void dispose() {
     _upiController.dispose();
@@ -27,6 +42,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _handleUpiSubmit() async {
+    if (!_ensureKycVerified()) {
+      return;
+    }
+
     final upiId = _upiController.text.trim();
 
     final upiRegex = RegExp(r'^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$');
@@ -147,6 +166,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   icon: Icons.add_card,
                   label: 'Add Money',
                   onTap: () {
+                    if (!_ensureKycVerified()) {
+                      return;
+                    }
                     pushToScreen(context, AppRoutes.addMoney.path);
                   },
                 ),
@@ -163,6 +185,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   icon: Icons.flash_on,
                   label: 'Blink',
                   onTap: () {
+                    if (!_ensureKycVerified()) {
+                      return;
+                    }
                     goToScreen(context, AppRoutes.blink.path);
                   },
                 ),

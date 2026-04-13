@@ -91,6 +91,16 @@ class _AddMoneyScreenState extends ConsumerState<AddMoneyScreen> {
     final user = ref.read(authStateChangesProvider).value;
     if (user == null) return;
 
+    if (user.kycStatus != true) {
+      CustomSnackBar.show(
+        context,
+        message: 'Please complete KYC verification to add money',
+        isError: true,
+      );
+      pushToScreen(context, AppRoutes.kyc.path);
+      return;
+    }
+
     if (user.pinHash == null) {
       CustomSnackBar.show(
         context,
@@ -148,9 +158,13 @@ class _AddMoneyScreenState extends ConsumerState<AddMoneyScreen> {
     final amountText = _amountController.text;
     final amount = double.tryParse(amountText) ?? 0;
     final maxAllowed = _dailyRemaining;
+    final isKycVerified = user?.kycStatus == true;
     final isValidAmount = amount >= 10 && amount <= maxAllowed;
     final isButtonEnabled =
-        isValidAmount && _selectedPaymentMethodId != null && !_isLoadingLimit;
+      isKycVerified &&
+      isValidAmount &&
+      _selectedPaymentMethodId != null &&
+      !_isLoadingLimit;
 
     return Scaffold(
       appBar: AppBar(
@@ -213,6 +227,26 @@ class _AddMoneyScreenState extends ConsumerState<AddMoneyScreen> {
             // Daily Limit Info
             _buildDailyLimitInfo(),
             const SizedBox(height: 24),
+
+            if (!isKycVerified)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.error.withOpacity(0.2)),
+                ),
+                child: const Text(
+                  'KYC verification is required before adding money to wallet.',
+                  style: TextStyle(
+                    color: AppColors.error,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
 
             // Enter Amount Section
             const Text(

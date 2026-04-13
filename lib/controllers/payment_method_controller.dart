@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:app/models/payment_card.dart';
+import 'package:app/providers/auth_provider.dart';
 import 'package:app/providers/payment_method_providers.dart';
 import 'package:app/utils/payment_util.dart';
 import 'package:fpdart/fpdart.dart';
@@ -47,6 +48,21 @@ class PaymentMethodController extends AsyncNotifier<List<PaymentCard>> {
     required String cvv,
     required String cardHolderName,
   }) async {
+    final user = ref.read(authStateChangesProvider).value;
+
+    if (user == null) {
+      state = AsyncValue.error('User not found', StackTrace.current);
+      return;
+    }
+
+    if (user.kycStatus != true) {
+      state = AsyncValue.error(
+        'Please complete KYC verification to add payment cards',
+        StackTrace.current,
+      );
+      return;
+    }
+
     final paymentMethodId = PaymentUtil.generatePaymentMethodId(cardNumber);
     final cardType = PaymentUtil.getCardType(cardNumber);
     final last4 = PaymentUtil.getLast4Digits(cardNumber);

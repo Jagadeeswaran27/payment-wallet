@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/models/blink_card_model.dart';
 import 'package:app/models/enums/payment_type.dart';
 import 'package:app/providers/payment_providers.dart';
+import 'package:app/providers/auth_provider.dart';
 import 'package:app/core/theme/app_theme.dart';
 import 'package:app/widgets/primary_button.dart';
 import 'package:app/widgets/custom_snackbar.dart';
@@ -39,6 +40,16 @@ class _BlinkPaymentSheetContentState extends State<_BlinkPaymentSheetContent> {
   bool _isLoading = false;
 
   void _handlePay() async {
+    final user = widget.ref.read(authStateChangesProvider).value;
+    if (user?.kycStatus != true) {
+      CustomSnackBar.show(
+        context,
+        message: 'Please complete KYC verification to make UPI payments',
+        isError: true,
+      );
+      return;
+    }
+
     final verified = await showPinVerificationSheet(context, widget.ref);
     if (!verified) return;
 

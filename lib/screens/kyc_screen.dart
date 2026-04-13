@@ -3,12 +3,14 @@ import 'dart:io';
 import 'package:app/core/theme/app_theme.dart';
 import 'package:app/providers/auth_provider.dart';
 import 'package:app/providers/kyc_provider.dart';
+import 'package:app/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:app/utils/kyc_validators.dart';
+import 'package:app/utils/navigation.dart';
 
 class KycScreen extends ConsumerStatefulWidget {
   const KycScreen({super.key});
@@ -81,27 +83,30 @@ class _KycScreenState extends ConsumerState<KycScreen> {
   @override
   Widget build(BuildContext context) {
     ref.listen(kycControllerProvider, (previous, next) {
-      if (!next.isLoading && !next.hasError) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('KYC Submitted Successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.pop(context);
-        }
+      final hasJustSucceeded = (previous?.isLoading ?? false) && next.hasValue;
+
+      if (hasJustSucceeded && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('KYC Submitted Successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        pushReplacementToScreen(context, AppRoutes.account.path);
       }
-      if (next.hasError) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(next.error.toString()),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
+
+      next.whenOrNull(
+        error: (error, stackTrace) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(error.toString()),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+      );
     });
 
     return Scaffold(

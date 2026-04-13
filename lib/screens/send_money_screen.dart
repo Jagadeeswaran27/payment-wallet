@@ -88,6 +88,16 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
     final user = ref.read(authStateChangesProvider).value;
     if (user == null) return;
 
+    if (user.kycStatus != true) {
+      CustomSnackBar.show(
+        context,
+        message: 'Please complete KYC verification to make UPI payments',
+        isError: true,
+      );
+      pushToScreen(context, AppRoutes.kyc.path);
+      return;
+    }
+
     if (user.pinHash == null) {
       CustomSnackBar.show(
         context,
@@ -140,6 +150,7 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
 
     bool isBalanceSufficient = true;
     final isWallet = _selectedSourceId == 'wallet';
+    final isKycVerified = user?.kycStatus == true;
     
     if (isWallet && user != null) {
       isBalanceSufficient = amount <= user.walletBalance;
@@ -147,7 +158,8 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
 
     final double activeLimit = isWallet ? 50000.0 : _dailyBankRemaining;
     final isValidAmount = amount >= 1 && amount <= activeLimit;
-    final isButtonEnabled = isValidAmount && isBalanceSufficient && !_isLoadingLimit;
+    final isButtonEnabled =
+        isKycVerified && isValidAmount && isBalanceSufficient && !_isLoadingLimit;
 
     return Scaffold(
       appBar: AppBar(
@@ -212,6 +224,27 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
                   ],
                 ),
               ),
+
+            if (!isKycVerified)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.error.withOpacity(0.2)),
+                ),
+                child: const Text(
+                  'KYC verification is required before making UPI payments.',
+                  style: TextStyle(
+                    color: AppColors.error,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+
             // Enter Amount Section
             const Text(
               'Enter Amount',

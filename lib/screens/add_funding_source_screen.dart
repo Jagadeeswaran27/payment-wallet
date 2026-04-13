@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/widgets/custom_snackbar.dart';
 import 'package:app/widgets/primary_button.dart';
 import 'package:app/core/theme/app_theme.dart';
+import 'package:app/router/app_routes.dart';
 import 'package:app/utils/navigation.dart';
+import 'package:app/providers/auth_provider.dart';
 import 'package:app/providers/payment_method_providers.dart';
 import 'package:app/utils/input_formatters.dart';
 
@@ -45,6 +47,17 @@ class _AddFundingSourceScreenState extends ConsumerState<AddFundingSourceScreen>
   }
 
   Future<void> _saveCard() async {
+    final user = ref.read(authStateChangesProvider).value;
+    if (user?.kycStatus != true) {
+      CustomSnackBar.show(
+        context,
+        message: 'Please complete KYC verification to add payment cards',
+        isError: true,
+      );
+      pushToScreen(context, AppRoutes.kyc.path);
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       await ref
           .read(paymentMethodControllerProvider.notifier)

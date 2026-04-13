@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:app/models/blink_card_model.dart';
+import 'package:app/providers/auth_provider.dart';
 import 'package:app/providers/blink_providers.dart';
 import 'package:app/providers/payment_method_providers.dart';
 import 'package:app/core/theme/app_theme.dart';
+import 'package:app/router/app_routes.dart';
 import 'package:app/widgets/custom_snackbar.dart';
 import 'package:app/widgets/primary_button.dart';
 import 'package:app/utils/navigation.dart';
@@ -52,6 +54,17 @@ class _AddEditBlinkCardScreenState
   }
 
   void _handleSave() async {
+    final user = ref.read(authStateChangesProvider).value;
+    if (user?.kycStatus != true) {
+      CustomSnackBar.show(
+        context,
+        message: 'Please complete KYC verification to create Blink cards',
+        isError: true,
+      );
+      pushToScreen(context, AppRoutes.kyc.path);
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
     if (_selectedSourceId == null) {
       CustomSnackBar.show(
