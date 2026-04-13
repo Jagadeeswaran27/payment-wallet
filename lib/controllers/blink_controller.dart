@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/providers/auth_provider.dart';
 import 'package:app/models/blink_card_model.dart';
