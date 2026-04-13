@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:app/router/app_routes.dart';
 import 'package:app/utils/navigation.dart';
 import 'package:app/core/theme/app_theme.dart';
 import 'package:app/widgets/primary_button.dart';
@@ -96,6 +98,7 @@ class _SetPinScreenState extends ConsumerState<SetPinScreen> {
       } else {
         if (mounted) {
           CustomSnackBar.show(context, message: 'PIN set successfully');
+          goToScreen(context, AppRoutes.account.path);
           popScreen(context);
         }
       }

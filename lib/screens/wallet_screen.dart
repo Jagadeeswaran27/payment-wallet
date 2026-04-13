@@ -23,6 +23,21 @@ class WalletScreen extends ConsumerStatefulWidget {
 class _WalletScreenState extends ConsumerState<WalletScreen> {
   bool _isManageMode = false;
 
+  bool _ensureKycVerified() {
+    final user = ref.read(authStateChangesProvider).value;
+    if (user?.kycStatus == true) {
+      return true;
+    }
+
+    CustomSnackBar.show(
+      context,
+      message: 'Please complete KYC verification to use this feature',
+      isError: true,
+    );
+    pushToScreen(context, AppRoutes.kyc.path);
+    return false;
+  }
+
   Object _getCardIcon(CardType type) {
     switch (type) {
       case CardType.visa:
@@ -126,6 +141,9 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
+                        if (!_ensureKycVerified()) {
+                          return;
+                        }
                         pushToScreen(context, AppRoutes.addMoney.path);
                       },
                       style: ElevatedButton.styleFrom(
@@ -291,6 +309,9 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
             // Add New Funding Source (Dashed Border)
             InkWell(
               onTap: () {
+                if (!_ensureKycVerified()) {
+                  return;
+                }
                 pushToScreen(context, AppRoutes.addFundingSource.path);
               },
               borderRadius: BorderRadius.circular(16),

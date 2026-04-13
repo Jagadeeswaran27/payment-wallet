@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:app/core/theme/app_theme.dart';
+import 'package:app/providers/auth_provider.dart';
 import 'package:app/providers/blink_providers.dart';
 import 'package:app/router/app_routes.dart';
 import 'package:app/utils/navigation.dart';
 import 'package:app/utils/payment_util.dart';
 import 'package:app/widgets/blink_payment_sheet.dart';
+import 'package:app/widgets/custom_snackbar.dart';
 
 const List<List<Color>> _blinkGradients = [
   [Color(0xFF1A1F36), Color(0xFF0D1126)], // Deep professional slate/navy
@@ -61,7 +63,12 @@ class BlinkScreen extends ConsumerWidget {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 20),
                   child: GestureDetector(
-                    onTap: () => showBlinkPaymentSheet(context, ref, card),
+                    onTap: () {
+                      if (!_ensureKycVerified(context, ref)) {
+                        return;
+                      }
+                      showBlinkPaymentSheet(context, ref, card);
+                    },
                     child: Container(
                       height: 160,
                       decoration: BoxDecoration(
@@ -146,6 +153,9 @@ class BlinkScreen extends ConsumerWidget {
                                       child: InkWell(
                                         borderRadius: BorderRadius.circular(8),
                                         onTap: () {
+                                          if (!_ensureKycVerified(context, ref)) {
+                                            return;
+                                          }
                                           pushToScreen(
                                             context,
                                             AppRoutes.addEditBlink.path,
@@ -239,7 +249,12 @@ class BlinkScreen extends ConsumerWidget {
         error: (error, stackTrace) => Center(child: Text('Error: $error')),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => pushToScreen(context, AppRoutes.addEditBlink.path),
+        onPressed: () {
+          if (!_ensureKycVerified(context, ref)) {
+            return;
+          }
+          pushToScreen(context, AppRoutes.addEditBlink.path);
+        },
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -307,6 +322,21 @@ class BlinkScreen extends ConsumerWidget {
         _blinkInfoOverlayEntry = null;
       }
     });
+  }
+
+  bool _ensureKycVerified(BuildContext context, WidgetRef ref) {
+    final user = ref.read(authStateChangesProvider).value;
+    if (user?.kycStatus == true) {
+      return true;
+    }
+
+    CustomSnackBar.show(
+      context,
+      message: 'Please complete KYC verification to use this feature',
+      isError: true,
+    );
+    pushToScreen(context, AppRoutes.kyc.path);
+    return false;
   }
 
   Widget _buildEmptyState(BuildContext context) {

@@ -32,6 +32,20 @@ class WalletController extends AsyncNotifier<void> {
   }) async {
     state = AsyncValue.loading();
 
+    final user = ref.read(authStateChangesProvider).value;
+    if (user == null) {
+      state = AsyncValue.error('User not found', StackTrace.current);
+      return;
+    }
+
+    if (user.kycStatus != true) {
+      state = AsyncValue.error(
+        'Please complete KYC verification to add wallet balance',
+        StackTrace.current,
+      );
+      return;
+    }
+
     final result = await ref
         .read(walletServiceProvider)
         .addWalletBalance(amount);

@@ -35,6 +35,20 @@ class PaymentController extends AsyncNotifier<String?> {
   }) async {
     state = const AsyncValue.loading();
 
+    final user = ref.read(authStateChangesProvider).value;
+    if (user == null) {
+      state = AsyncValue.error('User not found', StackTrace.current);
+      return;
+    }
+
+    if (user.kycStatus != true) {
+      state = AsyncValue.error(
+        'Please complete KYC verification to make UPI payments',
+        StackTrace.current,
+      );
+      return;
+    }
+
     if (paymentType == PaymentType.wallet) {
       final result = await ref
           .read(paymentServiceProvider)
