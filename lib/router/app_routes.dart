@@ -1,4 +1,5 @@
 import 'package:app/screens/kyc_screen.dart';
+import 'package:app/screens/set_pin_screen.dart';
 import 'package:flutter/material.dart';
 
 import 'package:go_router/go_router.dart';
@@ -11,7 +12,8 @@ import 'package:app/screens/welcome_screen.dart';
 import 'package:app/screens/profile_screen.dart';
 import 'package:app/screens/loading_screen.dart';
 import 'package:app/screens/wallet_screen.dart';
-import 'package:app/screens/cart_screen.dart';
+import 'package:app/screens/blink_screen.dart';
+import 'package:app/screens/add_edit_blink_card_screen.dart';
 import 'package:app/screens/account_screen.dart';
 import 'package:app/screens/add_funding_source_screen.dart';
 import 'package:app/screens/add_money_screen.dart';
@@ -27,7 +29,7 @@ enum AppRoutes {
   profile,
   loading,
   wallet,
-  cart,
+  blink,
   account,
   addFundingSource,
   addMoney,
@@ -35,6 +37,8 @@ enum AppRoutes {
   transactions,
   routes,
   kyc,
+  setPin,
+  addEditBlink,
 }
 
 extension AppRoutesExtension on AppRoutes {
@@ -47,13 +51,15 @@ extension AppRoutesExtension on AppRoutes {
     AppRoutes.profile: '/profile',
     AppRoutes.loading: '/loading',
     AppRoutes.wallet: '/wallet',
-    AppRoutes.cart: '/cart',
+    AppRoutes.blink: '/blink',
     AppRoutes.account: '/account',
     AppRoutes.addFundingSource: '/add-funding-source',
     AppRoutes.addMoney: '/add-money',
     AppRoutes.sendMoney: '/send-money',
     AppRoutes.transactions: '/transactions',
     AppRoutes.kyc: '/kyc',
+    AppRoutes.setPin: '/set-pin',
+    AppRoutes.addEditBlink: '/add-edit-blink',
   };
 
   static const Map<AppRoutes, String> _names = {
@@ -65,13 +71,15 @@ extension AppRoutesExtension on AppRoutes {
     AppRoutes.profile: 'profile',
     AppRoutes.loading: 'loading',
     AppRoutes.wallet: 'wallet',
-    AppRoutes.cart: 'cart',
+    AppRoutes.blink: 'blink',
     AppRoutes.account: 'account',
     AppRoutes.addFundingSource: 'add-funding-source',
     AppRoutes.addMoney: 'add-money',
     AppRoutes.sendMoney: 'send-money',
     AppRoutes.transactions: 'transactions',
     AppRoutes.kyc: 'kyc',
+    AppRoutes.setPin: 'set-pin',
+    AppRoutes.addEditBlink: 'add-edit-blink',
   };
 
   static const Map<AppRoutes, Widget Function()> _builders = {
@@ -83,13 +91,15 @@ extension AppRoutesExtension on AppRoutes {
     AppRoutes.profile: ProfileScreen.new,
     AppRoutes.loading: LoadingScreen.new,
     AppRoutes.wallet: WalletScreen.new,
-    AppRoutes.cart: CartScreen.new,
+    AppRoutes.blink: BlinkScreen.new,
     AppRoutes.account: AccountScreen.new,
     AppRoutes.addFundingSource: AddFundingSourceScreen.new,
     AppRoutes.addMoney: AddMoneyScreen.new,
     AppRoutes.sendMoney: SendMoneyScreen.new,
     AppRoutes.transactions: TransactionsScreen.new,
     AppRoutes.kyc: KycScreen.new,
+    AppRoutes.setPin: SetPinScreen.new,
+    AppRoutes.addEditBlink: AddEditBlinkCardScreen.new,
   };
 
   String get path => _paths[this]!;

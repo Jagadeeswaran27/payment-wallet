@@ -60,12 +60,12 @@ class MainWrapperScreen extends StatelessWidget {
                 label: 'Wallet',
               ),
               NavigationDestination(
-                icon: Icon(Icons.shopping_cart_outlined, color: Colors.black),
+                icon: Icon(Icons.flash_on_outlined, color: Colors.black),
                 selectedIcon: Icon(
-                  Icons.shopping_cart,
+                  Icons.flash_on,
                   color: AppColors.primary,
                 ),
-                label: 'Cart',
+                label: 'Blink',
               ),
               NavigationDestination(
                 icon: Icon(Icons.person_outline, color: Colors.black),
