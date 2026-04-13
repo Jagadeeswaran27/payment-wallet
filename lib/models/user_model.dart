@@ -9,6 +9,7 @@ class UserModel {
   final String? address;
   final String? profilePicPath;
   final bool? kycStatus;
+  final String? pinHash;
 
   UserModel({
     required this.uid,
@@ -21,6 +22,7 @@ class UserModel {
     this.address,
     this.profilePicPath,
     this.kycStatus,
+    this.pinHash,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -35,6 +37,7 @@ class UserModel {
       address: map['address'],
       profilePicPath: map['profilePicPath'],
       kycStatus: map['kycStatus'],
+      pinHash: map['pinHash'],
     );
   }
 
@@ -49,6 +52,7 @@ class UserModel {
     String? address,
     String? profilePicPath,
     bool? kycStatus,
+    String? pinHash,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -61,6 +65,7 @@ class UserModel {
       address: address ?? this.address,
       profilePicPath: profilePicPath ?? this.profilePicPath,
       kycStatus: kycStatus ?? this.kycStatus,
+      pinHash: pinHash ?? this.pinHash,
     );
   }
 
@@ -76,6 +81,7 @@ class UserModel {
       'profilePicPath': profilePicPath,
       'walletBalance': walletBalance,
       'kycStatus': kycStatus,
+      'pinHash': pinHash,
     };
   }
 }

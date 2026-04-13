@@ -14,6 +14,7 @@ import 'package:app/utils/navigation.dart';
 import 'package:app/models/payment_card.dart';
 import 'package:app/resources/icons.dart';
 import 'package:app/utils/decimal_max_value_formatter.dart';
+import 'package:app/widgets/pin_verification_sheet.dart';
 
 class SendMoneyScreen extends ConsumerStatefulWidget {
   const SendMoneyScreen({super.key});
@@ -26,6 +27,29 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
   final TextEditingController _amountController = TextEditingController();
 
   String _selectedSourceId = 'wallet';
+  double _dailyBankRemaining = 50000.0;
+  bool _isLoadingLimit = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchDailyRemaining();
+    });
+  }
+
+  Future<void> _fetchDailyRemaining() async {
+    setState(() => _isLoadingLimit = true);
+    final remaining = await ref
+        .read(paymentControllerProvider.notifier)
+        .getDailyBankPaymentRemaining();
+    if (mounted) {
+      setState(() {
+        _dailyBankRemaining = remaining;
+        _isLoadingLimit = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -60,12 +84,30 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
     return const Icon(Icons.credit_card, color: AppColors.primary, size: 24);
   }
 
-  void _handlePay() {
-    final amount = double.tryParse(_amountController.text) ?? 0;
+  void _handlePay() async {
+    final user = ref.read(authStateChangesProvider).value;
+    if (user == null) return;
 
-    ref
-        .read(paymentControllerProvider.notifier)
-        .sendMoney(amount: amount, paymentType: PaymentType.wallet);
+    if (user.pinHash == null) {
+      CustomSnackBar.show(
+        context,
+        message: 'Please set your PIN to make transactions',
+        isError: true,
+      );
+      return;
+    }
+
+    final verified = await showPinVerificationSheet(context, ref);
+    if (!verified) return;
+
+    final amount = double.tryParse(_amountController.text) ?? 0;
+    final isWallet = _selectedSourceId == 'wallet';
+
+    ref.read(paymentControllerProvider.notifier).sendMoney(
+          amount: amount,
+          paymentType: isWallet ? PaymentType.wallet : PaymentType.card,
+          sourceCardId: isWallet ? null : _selectedSourceId,
+        );
   }
 
   @override
@@ -86,6 +128,7 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
           );
         },
         data: (_) {
+          _fetchDailyRemaining();
           CustomSnackBar.show(context, message: 'Payment Successful!');
           goToScreen(context, AppRoutes.home.path);
         },
@@ -96,12 +139,15 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
     final amount = double.tryParse(amountText) ?? 0;
 
     bool isBalanceSufficient = true;
-    if (_selectedSourceId == 'wallet' && user != null) {
+    final isWallet = _selectedSourceId == 'wallet';
+    
+    if (isWallet && user != null) {
       isBalanceSufficient = amount <= user.walletBalance;
     }
 
-    final isValidAmount = amount >= 1 && amount <= 50000;
-    final isButtonEnabled = isValidAmount && isBalanceSufficient;
+    final double activeLimit = isWallet ? 50000.0 : _dailyBankRemaining;
+    final isValidAmount = amount >= 1 && amount <= activeLimit;
+    final isButtonEnabled = isValidAmount && isBalanceSufficient && !_isLoadingLimit;
 
     return Scaffold(
       appBar: AppBar(
@@ -182,7 +228,10 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
                 decimal: true,
               ),
               inputFormatters: [
-                DecimalMaxValueFormatter(maxValue: 50000, decimalPlaces: 2),
+                DecimalMaxValueFormatter(
+                  maxValue: isWallet ? 50000.0 : _dailyBankRemaining,
+                  decimalPlaces: 2,
+                ),
               ],
               onChanged: _onAmountChanged,
               style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
@@ -214,12 +263,37 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
                 fillColor: Colors.white,
               ),
             ),
-            if (!isBalanceSufficient && _selectedSourceId == 'wallet')
+            if (!isBalanceSufficient && isWallet)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
                   'Insufficient Wallet Balance (₹${user?.walletBalance ?? 0})',
                   style: const TextStyle(color: AppColors.error, fontSize: 12),
+                ),
+              ),
+
+            if (!isWallet)
+              Padding(
+                padding: const EdgeInsets.only(top: 12.0),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: Colors.grey.shade600,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _isLoadingLimit
+                          ? 'Checking limit...'
+                          : 'Daily Bank Limit Remaining: ${PaymentUtil.formatAmount(_dailyBankRemaining)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
 

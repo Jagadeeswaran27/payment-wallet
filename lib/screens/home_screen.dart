@@ -160,10 +160,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 _buildQuickActionButton(
                   context,
-                  icon: Icons.shopping_cart,
-                  label: 'Cart',
+                  icon: Icons.flash_on,
+                  label: 'Blink',
                   onTap: () {
-                    goToScreen(context, AppRoutes.cart.path);
+                    goToScreen(context, AppRoutes.blink.path);
                   },
                 ),
               ],

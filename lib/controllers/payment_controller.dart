@@ -12,6 +12,17 @@ class PaymentController extends AsyncNotifier<String?> {
     return null;
   }
 
+  Future<double> getDailyBankPaymentRemaining() async {
+    final result = await ref
+        .read(paymentServiceProvider)
+        .getDailyBankPaymentRemaining();
+
+    return result.fold(
+      (failure) => 0.0,
+      (remaining) => remaining,
+    );
+  }
+
   Future<void> storeUpiId({required String upiId}) async {
     state = const AsyncValue.loading();
     state = AsyncValue.data(upiId);
@@ -61,8 +72,42 @@ class PaymentController extends AsyncNotifier<String?> {
         },
       );
     } else {
-      Future.delayed(const Duration(seconds: 2));
-      state = const AsyncValue.data(null);
+      // Process bank payment checking daily limits via transaction
+      final bankPaymentResult = await ref
+          .read(paymentServiceProvider)
+          .processBankPayment(amount);
+          
+      bankPaymentResult.fold(
+        (failure) {
+          state = AsyncValue.error(failure.message, StackTrace.current);
+        },
+        (success) async {
+          final upiId = state.value;
+
+          final transactionResult = await ref
+              .read(transactionServiceProvider)
+              .addTransaction(
+                transaction: TransactionModel(
+                  id: '',
+                  amount: amount,
+                  paymentType: PaymentType.card,
+                  destinationUpiId: upiId,
+                  sourceCardId: sourceCardId,
+                ),
+              );
+
+          transactionResult.fold(
+            (failure) =>
+                state = AsyncValue.error(failure.message, StackTrace.current),
+            (transaction) {
+              ref
+                  .read(transactionControllerProvider.notifier)
+                  .updateTransaction(transaction);
+              state = AsyncValue.data(upiId);
+            },
+          );
+        },
+      );
     }
   }
 }

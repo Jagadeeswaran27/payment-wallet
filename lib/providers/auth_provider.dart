@@ -60,4 +60,8 @@ class AuthUserStateNotifier extends StreamNotifier<UserModel?> {
   void updateKycStatus(bool status) {
     state = AsyncValue.data(state.value?.copyWith(kycStatus: status));
   }
+
+  void updatePinHash(String pinHash) {
+    state = AsyncValue.data(state.value?.copyWith(pinHash: pinHash));
+  }
 }

@@ -105,13 +105,17 @@ class AccountScreen extends ConsumerWidget {
           _buildOptionItem(
             context,
             icon: Icons.lock_outline_rounded,
-            title: 'Set PIN',
-            subtitle: 'Secure your wallet',
+            title: user?.pinHash != null ? 'Change PIN' : 'Set PIN',
+            subtitle: user?.pinHash != null ? 'PIN is active' : 'Secure your wallet',
+            trailing: user?.pinHash != null
+                ? const Icon(
+                    Icons.check_circle_rounded,
+                    color: Colors.green,
+                    size: 20,
+                  )
+                : null,
             onTap: () {
-              CustomSnackBar.show(
-                context,
-                message: "Set Pin feature will be available soon",
-              );
+              pushToScreen(context, AppRoutes.setPin.path);
             },
           ),
           _buildDivider(),

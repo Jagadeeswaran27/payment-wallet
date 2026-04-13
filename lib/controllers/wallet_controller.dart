@@ -14,6 +14,18 @@ class WalletController extends AsyncNotifier<void> {
     return null;
   }
 
+  /// Returns how much the user can still add to their wallet today.
+  Future<double> getDailyTopUpRemaining() async {
+    final result = await ref
+        .read(walletServiceProvider)
+        .getDailyTopUpRemaining();
+
+    return result.fold(
+      (failure) => 0.0,
+      (remaining) => remaining,
+    );
+  }
+
   Future<void> addWalletBalance({
     required double amount,
     required String sourceCardId,
@@ -59,3 +71,4 @@ class WalletController extends AsyncNotifier<void> {
     );
   }
 }
+

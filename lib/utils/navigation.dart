@@ -2,8 +2,8 @@ import 'package:flutter/widgets.dart';
 
 import 'package:go_router/go_router.dart';
 
-void pushToScreen(BuildContext context, String screenPath) {
-  context.push(screenPath);
+void pushToScreen(BuildContext context, String screenPath, {Object? extra}) {
+  context.push(screenPath, extra: extra);
 }
 
 void pushToScreenNamed(BuildContext context, String screenName) {

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:app/router/app_routes.dart';
 import 'package:app/core/theme/app_theme.dart';
+import 'package:app/core/services/wallet_service.dart';
 import 'package:app/providers/auth_provider.dart';
 import 'package:app/providers/payment_method_providers.dart';
 import 'package:app/providers/walllet_providers.dart';
@@ -14,6 +15,7 @@ import 'package:app/widgets/payment_card_shimmer.dart';
 import 'package:app/models/payment_card.dart';
 import 'package:app/resources/icons.dart';
 import 'package:app/utils/decimal_max_value_formatter.dart';
+import 'package:app/widgets/pin_verification_sheet.dart';
 
 class AddMoneyScreen extends ConsumerStatefulWidget {
   const AddMoneyScreen({super.key});
@@ -26,10 +28,25 @@ class _AddMoneyScreenState extends ConsumerState<AddMoneyScreen> {
   final TextEditingController _amountController = TextEditingController();
   String? _selectedPaymentMethodId;
   final List<int> _quickAmounts = [100, 500, 1000, 2000];
+  double _dailyRemaining = WalletService.dailyTopUpLimit;
+  bool _isLoadingLimit = true;
 
   @override
   void initState() {
     super.initState();
+    _fetchDailyRemaining();
+  }
+
+  Future<void> _fetchDailyRemaining() async {
+    final remaining = await ref
+        .read(walletControllerProvider.notifier)
+        .getDailyTopUpRemaining();
+    if (mounted) {
+      setState(() {
+        _dailyRemaining = remaining;
+        _isLoadingLimit = false;
+      });
+    }
   }
 
   @override
@@ -70,7 +87,22 @@ class _AddMoneyScreenState extends ConsumerState<AddMoneyScreen> {
     return const Icon(Icons.credit_card, color: AppColors.primary, size: 24);
   }
 
-  void _handleAddMoney() {
+  void _handleAddMoney() async {
+    final user = ref.read(authStateChangesProvider).value;
+    if (user == null) return;
+
+    if (user.pinHash == null) {
+      CustomSnackBar.show(
+        context,
+        message: 'Please set your PIN to make transactions',
+        isError: true,
+      );
+      return;
+    }
+
+    final verified = await showPinVerificationSheet(context, ref);
+    if (!verified) return;
+
     final amount = double.tryParse(_amountController.text) ?? 0;
     ref
         .read(walletControllerProvider.notifier)
@@ -99,19 +131,26 @@ class _AddMoneyScreenState extends ConsumerState<AddMoneyScreen> {
     ref.listen(walletControllerProvider, (previous, next) {
       next.whenOrNull(
         data: (_) {
+          _fetchDailyRemaining();
           CustomSnackBar.show(context, message: 'Money added successfully');
           goToScreen(context, AppRoutes.wallet.path);
         },
         error: (error, stackTrace) {
-          CustomSnackBar.show(context, message: error.toString());
+          CustomSnackBar.show(
+            context,
+            message: error.toString(),
+            isError: true,
+          );
         },
       );
     });
 
     final amountText = _amountController.text;
     final amount = double.tryParse(amountText) ?? 0;
-    final isValidAmount = amount >= 10 && amount <= 50000;
-    final isButtonEnabled = isValidAmount && _selectedPaymentMethodId != null;
+    final maxAllowed = _dailyRemaining;
+    final isValidAmount = amount >= 10 && amount <= maxAllowed;
+    final isButtonEnabled =
+        isValidAmount && _selectedPaymentMethodId != null && !_isLoadingLimit;
 
     return Scaffold(
       appBar: AppBar(
@@ -169,7 +208,11 @@ class _AddMoneyScreenState extends ConsumerState<AddMoneyScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
+
+            // Daily Limit Info
+            _buildDailyLimitInfo(),
+            const SizedBox(height: 24),
 
             // Enter Amount Section
             const Text(
@@ -184,7 +227,10 @@ class _AddMoneyScreenState extends ConsumerState<AddMoneyScreen> {
             TextField(
               controller: _amountController,
               inputFormatters: [
-                DecimalMaxValueFormatter(maxValue: 50000, decimalPlaces: 2),
+                DecimalMaxValueFormatter(
+                  maxValue: maxAllowed,
+                  decimalPlaces: 2,
+                ),
               ],
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
@@ -218,9 +264,9 @@ class _AddMoneyScreenState extends ConsumerState<AddMoneyScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Minimum ₹10 • Maximum ₹50,000',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
+            Text(
+              'Minimum ₹10 • Maximum ${PaymentUtil.formatAmount(maxAllowed)}',
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
             ),
             const SizedBox(height: 16),
             Wrap(
@@ -439,6 +485,113 @@ class _AddMoneyScreenState extends ConsumerState<AddMoneyScreen> {
             const SizedBox(height: 20),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDailyLimitInfo() {
+    if (_isLoadingLimit) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: const Center(
+          child: SizedBox(
+            height: 16,
+            width: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    final used = WalletService.dailyTopUpLimit - _dailyRemaining;
+    final progress = used / WalletService.dailyTopUpLimit;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _dailyRemaining <= 0
+            ? AppColors.error.withOpacity(0.05)
+            : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _dailyRemaining <= 0
+              ? AppColors.error.withOpacity(0.3)
+              : Colors.grey.shade200,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    _dailyRemaining <= 0
+                        ? Icons.warning_amber_rounded
+                        : Icons.info_outline,
+                    size: 16,
+                    color: _dailyRemaining <= 0
+                        ? AppColors.error
+                        : AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Daily Top-Up Limit',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: _dailyRemaining <= 0
+                          ? AppColors.error
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                '${PaymentUtil.formatAmount(used)} / ${PaymentUtil.formatAmount(WalletService.dailyTopUpLimit)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: _dailyRemaining <= 0
+                      ? AppColors.error
+                      : AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress.clamp(0.0, 1.0),
+              backgroundColor: Colors.grey.shade200,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                _dailyRemaining <= 0 ? AppColors.error : AppColors.primary,
+              ),
+              minHeight: 6,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _dailyRemaining <= 0
+                ? 'You have reached your daily limit. Try again tomorrow.'
+                : 'Remaining: ${PaymentUtil.formatAmount(_dailyRemaining)}',
+            style: TextStyle(
+              fontSize: 12,
+              color: _dailyRemaining <= 0
+                  ? AppColors.error
+                  : AppColors.success,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
