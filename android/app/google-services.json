@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "676914695479",
+    "project_id": "paytm-wallet-4d4b5",
+    "storage_bucket": "paytm-wallet-4d4b5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676914695479:android:98df5f804181a52d8b1eb2",
+        "android_client_info": {
+          "package_name": "com.example.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZpN9Jb_aDYf5qBgLPr6PJuE6r1bbC5V8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
