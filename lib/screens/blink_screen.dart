@@ -220,7 +220,7 @@ class BlinkScreen extends ConsumerWidget {
                                         const SizedBox(height: 4),
                                         Text(
                                           card.sourceId == 'wallet'
-                                              ? 'Paytm Wallet'
+                                              ? 'Wallet'
                                               : 'Card •••• ${card.sourceId.substring(max(0, card.sourceId.length - 4))}',
                                           style: const TextStyle(
                                             fontSize: 13,

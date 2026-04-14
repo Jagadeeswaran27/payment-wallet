@@ -242,7 +242,7 @@ class _AddEditBlinkCardScreenState
                         items: [
                           const DropdownMenuItem(
                             value: 'wallet',
-                            child: Text('Paytm Wallet'),
+                            child: Text('Wallet'),
                           ),
                           ...cardItems,
                         ],
